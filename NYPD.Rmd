@@ -1,0 +1,304 @@
+---
+title: "NYPD Shooting Incident Data (Historic) Analysis Report"
+author: 
+date: "2/13/2022"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Description
+
+This analysis report using the analysis for NYPD shooting incident data, the analysis have two topics, one is the victim statistic report including sex,age and race, the other is the shooting murder data analysis which focus on which borough have the highest risk, using four type of graphic to show the result.
+ 
+
+## NYPD data from Data.gov website
+ 
+ 
+
+```{r library, include=FALSE,echo=FALSE}
+ 
+library(tidyverse)
+library(lubridate)
+```
+
+```{r csv file, echo=TRUE}
+ulr<-"https://data.cityofnewyork.us/api/views/833y-fsy8/rows.csv?accessType=DOWNLOAD"
+NYPD_cases<-read_csv(ulr)
+```
+
+## Clean and Aggregate Data
+
+Using R for prepare aggregate data, code shows here.
+
+```{r Clean and Aggregate, include=TRUE}
+knitr::opts_chunk$set(echo=TRUE)
+
+ NYPD<-NYPD_cases   %>%  select ( -c("JURISDICTION_CODE","X_COORD_CD","Y_COORD_CD","LOCATION_DESC","Longitude","Latitude","Lon_Lat" ))  
+
+  NYPD$OCCUR_DATE<-mdy(NYPD$OCCUR_DATE) 
+
+  NYPD$Year<-as.numeric(format(NYPD$OCCUR_DATE,format="%Y")) 
+
+ 
+ NYPD1<-NYPD %>% count(Year,BORO,STATISTICAL_MURDER_FLAG,VIC_SEX,sort=TRUE) %>% filter(STATISTICAL_MURDER_FLAG=='TRUE') %>% rename(Case=n)
+NYPD1$Year<-as.numeric(NYPD1$Year)  
+
+
+NYPD1<-NYPD %>% count(Year,BORO,STATISTICAL_MURDER_FLAG,
+       sort=TRUE) %>% filter(STATISTICAL_MURDER_FLAG=='TRUE') %>% rename(Case=n) 
+ 
+
+NYPD_VIC_AGE<-NYPD %>% count(Year,VIC_AGE_GROUP) %>% rename(Case=n) 
+NYPD_VIC_SEX<-NYPD %>% count(Year,VIC_SEX) %>% rename(Case=n) 
+NYPD_VIC_RACE<-NYPD %>% count(Year,VIC_RACE) %>% rename(Case=n) 
+
+NYPD_PERP_AGE_GROUP<-NYPD %>% count(Year,PERP_AGE_GROUP) %>% rename(Case=n) 
+NYPD_PERP_AGE_GROUP$PERP_AGE_GROUP[NYPD_PERP_AGE_GROUP$PERP_AGE_GROUP %in%  NA ] <- "UNKNOWN" 
+
+
+NYPD_PERP_RACE<-NYPD %>% count(Year,PERP_RACE) %>% rename(Case=n) 
+NYPD_PERP_RACE$PERP_RACE[NYPD_PERP_RACE$PERP_RACE %in%  NA ] <- "UNKNOWN"  
+
+ 
+```
+\newpage
+## Visualizing Data
+
+### New York Shooting Incident Report
+
+NewYork Shooting Incident Victim Age Report 
+
+```{r NewYork_BORO_Shooting_Report_NYPD_VIC_AGE, include=TRUE, echo=TRUE}
+NYPD_VIC_AGE %>%  
+  
+  ggplot(aes(x=Year, y = Case, fill=VIC_AGE_GROUP),color=VIC_AGE_GROUP) +
+  geom_bar(stat ='identity', position = 'dodge')+
+  theme(legend.position="bottom",
+        axis.text.x=element_text(angle=90)) +
+  labs(title="NewYork Shooting Incident Victim Age Report", y= NULL)
+ 
+
+```
+\newpage
+
+NewYork Shooting Incident Victim Sex Report 
+
+```{r NewYork_BORO_Shooting_Report_NYPD_VIC_SEX, include=TRUE, echo=TRUE}
+NYPD_VIC_SEX %>%  
+  
+  ggplot(aes(x=Year, y = Case, fill=VIC_SEX),color=VIC_SEX) +
+  geom_bar(stat ='identity', position = 'dodge')+
+  theme(legend.position="bottom",
+        axis.text.x=element_text(angle=90)) +
+  labs(title="NewYork Shooting Incident Victim Sex Report", y= NULL)
+ 
+
+```
+\newpage
+NewYork Shooting Incident Victim Race Report 
+
+```{r NewYork_BORO_Shooting_Report_NYPD_VIC_RACE, include=TRUE, echo=TRUE}
+NYPD_VIC_RACE %>%  
+   
+  ggplot(aes(x=Year, y = Case, fill=VIC_RACE),color=VIC_RACE) +
+  geom_bar(stat ='identity', position = 'dodge')+
+  theme(legend.position="bottom",
+        axis.text.x=element_text(angle=90)) +
+  labs(title="NewYork Shooting Incident Victim Race Report", y= NULL)
+ 
+
+```
+
+\newpage
+NewYork Shooting Incident Perpetrator Age Report with Unknown age, have bias data with age as 1020,224 and 940, process those three records to age as Unknown.
+
+```{r NewYork_BORO_Shooting_Report_NYPD_PERP_AGE_GROUP, include=TRUE, echo=TRUE}
+ NYPD_PERP_AGE_GROUP %>% filter(PERP_AGE_GROUP   %in%   c( 1020,224 ,940))  
+
+NYPD_PERP_AGE_GROUP$PERP_AGE_GROUP[NYPD_PERP_AGE_GROUP$PERP_AGE_GROUP %in%   c( 1020,224 ,940) ] <- "UNKNOWN" 
+
+NYPD_PERP_AGE_GROUP %>%  
+  ggplot(aes(x=Year, y = Case, fill=PERP_AGE_GROUP),color=NYPD_PERP_AGE_GROUP$PERP_AGE_GROUP) +
+  geom_bar(stat ='identity', position = 'dodge')+
+  theme(legend.position="bottom",
+        axis.text.x=element_text(angle=90)) +
+  labs(title="NewYork Shooting Incident Perpetrator Age Report with unknown records", y= NULL)
+
+ 
+
+```
+\newpage
+NewYork Shooting Incident Perpetrator Race Report with unknown Race
+
+```{r NewYork_BORO_Shooting_Report_NYPD_PERP_RACE_GROUP, include=TRUE, echo=TRUE}
+
+NYPD_PERP_RACE %>%  
+   ggplot(aes(x=Year, y = Case, fill=PERP_RACE),color=PERP_RACE) +
+  geom_bar(stat ='identity', position = 'dodge')+
+  theme(legend.position="bottom",
+        axis.text.x=element_text(angle=90)) +
+  labs(title="NewYork Shooting Incident Perpetrator Race Report with Unknown", y= NULL)
+```
+
+\newpage
+## Warning Area and Hour
+
+Which area and what time should be warning to teenage and young people? Here are two report will help people easliy figure it out.
+
+### NewYork Shooting Incident Location Report
+
+Located each incident to new york city map, easy to observe the dangerous area.
+
+``` {r NewYork_BORO_Incident_Report_Location, include=TRUE, echo=TRUE,message=FALSE} 
+          knitr::opts_chunk$set(error = TRUE)
+
+
+ if (!"rgdal" %in% installed.packages()) install.packages("rgdal")
+     library(rgdal)
+ 
+
+ if (!"httr" %in% installed.packages()) install.packages("httr")
+  library(httr)
+
+ 
+
+#get NYC map from website
+
+
+get_nyc_neighborhoods <- function(){
+  r <- GET('http://data.beta.nyc//dataset/0ff93d2d-90ba-457c-9f7e-39e47bf2ac5f/resource/35dd04fb-81b3-479b-a074-a27a37888ce7/download/d085e2f8d0b54d4590b1e7d1f35594c1pediacitiesnycneighborhoods.geojson')
+  return(readOGR(content(r,'text'), 'OGRGeoJSON', verbose = F))
+}
+nyc_neighborhoods_df <- get_nyc_neighborhoods()
+
+#Prepare NYC shooting locatin data      
+    NYPD_Cases_loc<-NYPD_cases%>%
+             mutate(long=Longitude,lat=Latitude ) 
+    NYPD_Cases_loc<-NYPD_Cases_loc%>%select (long,lat,STATISTICAL_MURDER_FLAG,BORO) 
+    
+ 
+#plot  the map
+    
+   ggplot(nyc_neighborhoods_df, aes(long, lat, group = group, fill = "grey")) + 
+  geom_polygon(alpha = 0.5) +
+  geom_path(color = "white") +
+  coord_equal() +
+  scale_fill_identity() +
+  theme(legend.position = "none") +
+    geom_point(data=NYPD_Cases_loc, aes(x=long, y=lat ,color=BORO) ,  inherit.aes = FALSE, alpha = 0.5, size = 0.5) +   coord_equal() +
+     theme(legend.position="bottom",
+        axis.text.x=element_text(angle=90)) +
+  labs(title="NewYork Shooting Incident Location Report", y= NULL)
+```
+
+### NewYork Shooting Incident Hour Report
+
+``` {r NewYork_BORO_Incident_Hour, include=TRUE, echo=TRUE,message=FALSE} 
+          knitr::opts_chunk$set(error = TRUE)
+ 
+ NYPD_cases_hr<- NYPD_cases %>%
+ mutate(hour=format(as.POSIXct(NYPD_cases$OCCUR_TIME), format = "%H"))
+ 
+ NYPDhr<-NYPD_cases_hr %>% count(hour,
+       sort=TRUE)   %>% rename(Case=n) 
+       
+  NYPDhr %>%  
+  ggplot(aes(x=hour, y = Case  ) ) +
+  geom_bar(stat ='identity', position = 'dodge',fill="orange")+
+  theme(legend.position="bottom",
+        axis.text.x=element_text(angle=90)) +
+  labs(title="NewYork Shooting Incident Hour Report", y= NULL)
+ 
+```
+
+
+\newpage
+Prediction Using Linear Regression
+
+``` {r NewYork_BORO_Murder_Report_Linear_Regression, include=TRUE, echo=TRUE} 
+plot(Case~Year,data=NYPD1,pch=16,col='red' )
+title("NewYork BORO Murder Predict", line = -2)
+model2=lm(Case~Year,data=NYPD1)
+data.pre=data.frame(predict(model2,interval='prediction'))
+lines(data.pre$lwr~NYPD1$Year,col='blue',lty=2)
+lines(data.pre$upr~NYPD1$Year,col='blue',lty=2)
+```
+
+
+
+\newpage
+### New York Shooting Incident Murder Case Report
+
+```{r NewYork_BORO_Murder_Report_Dodge, include=TRUE, echo=TRUE}
+ 
+ NYPD1 %>%  
+  filter(Case>0) %>%
+  ggplot(aes(x=Year, y = Case, fill=BORO),color=BORO) +
+  geom_bar(stat ='identity', position = 'dodge')+
+  theme(legend.position="bottom",
+        axis.text.x=element_text(angle=90)) +
+  labs(title="NewYork BORO Murder Report Dodge", y= NULL)
+ 
+```
+\newpage
+```{r NewYork_BORO_Murder_Report_Stack, include=TRUE, echo=TRUE}
+   NYPD1 %>%  
+  filter(Case>0) %>%
+  ggplot(aes(x=Year, y = Case, fill=BORO),color=BORO) +
+  geom_bar(stat ='identity', position = 'stack')+
+  theme(legend.position="bottom",
+        axis.text.x=element_text(angle=90)) +
+  labs(title="NewYork BORO Murder Report Stack", y= NULL)
+```
+\newpage
+```{r NewYork_BORO_Murder_Report_BAR, echo=TRUE}
+  NYPD1 %>%  
+  filter(Case>0) %>%
+  ggplot(aes(x=Year, y = Case, fill=BORO),color=BORO) +
+  geom_bar(stat ='identity', position = 'fill')+
+  theme(legend.position="bottom",
+        axis.text.x=element_text(angle=90)) +
+  labs(title="NewYork Murder Report Percentage each BORO", y= NULL)
+```
+\newpage
+```{r NewYork_BORO_Murder_Report_line, include=TRUE, echo=TRUE}
+  NYPD1 %>%  
+  filter(Case>0) %>%
+  ggplot(aes(x=Year,BORO, y = Case),color=BORO) +
+  geom_line(aes(color=BORO))+
+  geom_point(aes(color=BORO))+
+  theme(legend.position="bottom",
+        axis.text.x=element_text(angle=90)) +
+  labs(title="NewYork BORO Murder Report", y= NULL)
+
+```
+
+
+##  Conclusion
+
+### New York Shooting Incident Report Conclusion:
+
+After did the data analysis from 2006 to 2020, we got the following conclusion:
+
+1. Highest risk Victim sex are male. 
+2. Highest risk victim age are between 25-44, second are 18-24.
+3. Highest risk victim race are Black
+4. Highest risk perpetrator age cannot be statistic since of too high  unknown age records.
+5. Highest risk perpetrator race cannot be statistic since of too high  unknown race records.
+6. Highest risk time in a day is night hour.
+
+### New York Boroughs Shooting Murder Report Conclusion:
+1.Highest risk borough are Brooklyn.
+
+2.Based on the linear regression predict analysis, the Murder case in five borough have decreased  over the past 15 years, and this trend will continue.
+
+## Bias Discussion
+
+Since the NYPD Shooting Data didn't include any population data and size info for each borough, so the result of the highest risk borough would have potential bias, since we cannot report the statistics by population density or by land area. 
+
+ 
